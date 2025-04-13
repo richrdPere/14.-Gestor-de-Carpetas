@@ -1,0 +1,2 @@
+C:/Users/Richard Pereira/Desktop/PROYECTO - Flutter/14.-Gestor-de-Carpetas/android/app/.cxx/Debug/h4c646p3/x86/CMakeFiles/edit_cache.dir
+C:/Users/Richard Pereira/Desktop/PROYECTO - Flutter/14.-Gestor-de-Carpetas/android/app/.cxx/Debug/h4c646p3/x86/CMakeFiles/rebuild_cache.dir
