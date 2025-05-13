@@ -55,20 +55,6 @@ class PhotoService {
 
     if (decodedImage == null) return null;
 
-    /*
-    // final timestamp = DateTime.now();
-    // final position = await Geolocator.getCurrentPosition();
-
-    // final timestampMillis = timestamp.millisecondsSinceEpoch;
-    // final newImagePath = p.join(folderPath, 'photo_$timestampMillis.jpg');
-    
-    // Cargar fuente bitmap
-    final originalBytes = await File(image.path).readAsBytes();
-    final decodedImage = img.decodeImage(originalBytes);
-
-    if (decodedImage == null) return null;
-    */
-
     // ✅ Cargar fuente tipo bitmap desde .fnt y .png
     final fontFnt = await rootBundle.loadString('assets/fonts/Arial.fnt');
     final fontPng = await rootBundle.load('assets/fonts/Arial.png');

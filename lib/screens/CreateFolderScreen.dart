@@ -3,8 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+// Models
+import '../models/folder_model.dart';
+
+// Services
 import 'package:app_carpetas/services/FolderService.dart';
+
+// Screens
 import 'package:app_carpetas/screens/PhotoCaptureScreen.dart';
+import 'package:app_carpetas/screens/FolderDetailScreen.dart';
 
 class CreateFolderScreen extends StatefulWidget {
   const CreateFolderScreen({super.key});
@@ -14,9 +21,11 @@ class CreateFolderScreen extends StatefulWidget {
 }
 
 class _CreateFolderScreenState extends State<CreateFolderScreen> {
-  final TextEditingController _controller = TextEditingController();
+  final FolderService _folderService = FolderService();
   String? error;
-  List<Directory> folders = [];
+  List<FolderModel> folders = [];
+
+  final TextEditingController _folderNameController = TextEditingController();
 
   @override
   void initState() {
@@ -30,41 +39,64 @@ class _CreateFolderScreenState extends State<CreateFolderScreen> {
   }
 
   Future<void> _loadFolders() async {
-    final loaded = await FolderService.getFolders();
+    final loadedFolders = await _folderService.listFolders();
     setState(() {
-      folders = loaded;
+      folders = loadedFolders;
     });
   }
 
-  void _createFolder() async {
-    final name = _controller.text.trim();
+  Future<void> _createFolder() async {
+    final name = _folderNameController.text.trim();
     if (name.isEmpty) {
       setState(() => error = "El nombre no puede estar vacío.");
       return;
     }
 
-    await _requestPermissions();
+    // await _requestPermissions();
 
     try {
-      final folder = await FolderService.createFolder(name);
+      await _folderService.createFolder(name);
+
       if (!mounted) return;
-      _controller.clear();
+      _folderNameController.clear();
+
       setState(() => error = null);
       await _loadFolders();
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PhotoCaptureScreen(
-            folderPath: folder.path,
-            folderName: name,
-          ),
-        ),
-      );
     } catch (e) {
       setState(() => error = "Error al crear carpeta: $e");
     }
   }
+
+  // Future<void> _createFolder() async {
+  //   final name = _folderNameController.text.trim();
+
+  //   if (name.isEmpty) {
+  //     setState(() => error = "El nombre no puede estar vacío.");
+  //     return;
+  //   }
+
+  //   await _requestPermissions();
+
+  //   try {
+  //     final folder = await _folderService.createFolder(name);
+  //     if (!mounted) return;
+  //     _folderNameController.clear();
+  //     setState(() => error = null);
+  //     await _loadFolders();
+
+  //     Navigator.push(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (_) => PhotoCaptureScreen(
+  //           folderPath: folder.path,
+  //           folderName: name,
+  //         ),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     setState(() => error = "Error al crear carpeta: $e");
+  //   }
+  // }
 
   String _formatDate(DateTime date) {
     return DateFormat('dd/MM/yyyy – HH:mm').format(date);
@@ -77,13 +109,14 @@ class _CreateFolderScreenState extends State<CreateFolderScreen> {
     return files.where((f) => f is File && f.path.endsWith(".jpg")).length;
   }
 
-  void _openFolder(Directory folder) {
+  void _openFolder(FolderModel folder) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PhotoCaptureScreen(
+        builder: (_) => FolderDetailScreen(
           folderPath: folder.path,
-          folderName: folder.path.split('/').last,
+          folderName: folder.name,
+          //folderName: folder.path.split('/').last,
         ),
       ),
     );
@@ -97,22 +130,29 @@ class _CreateFolderScreenState extends State<CreateFolderScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(
-              controller: _controller,
-              decoration: const InputDecoration(
-                labelText: "Nombre de carpeta",
-                border: OutlineInputBorder(),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _folderNameController,
+                decoration: InputDecoration(
+                  labelText: "Nombre de carpeta",
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.create_new_folder),
+                    onPressed: _createFolder,
+                  ),
+                  border: const OutlineInputBorder(),
+                ),
               ),
             ),
             const SizedBox(height: 12),
             if (error != null)
               Text(error!, style: const TextStyle(color: Colors.red)),
             const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _createFolder,
-              icon: const Icon(Icons.folder_open),
-              label: const Text("Crear y continuar"),
-            ),
+            // ElevatedButton.icon(
+            //   onPressed: _createFolder,
+            //   icon: const Icon(Icons.folder_open),
+            //   label: const Text("Crear y continuar"),
+            // ),
             const SizedBox(height: 24),
             const Text("Carpetas creadas",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -124,8 +164,8 @@ class _CreateFolderScreenState extends State<CreateFolderScreen> {
                       itemCount: folders.length,
                       itemBuilder: (context, index) {
                         final folder = folders[index];
-                        final folderName = folder.path.split('/').last;
-                        final creationDate = folder.statSync().modified;
+                        final folderName = folder.name;
+                        final creationDate = folder.creationDate;
 
                         return FutureBuilder<int>(
                           future: _getPhotoCount(folder.path),
@@ -136,16 +176,54 @@ class _CreateFolderScreenState extends State<CreateFolderScreen> {
                                   const Icon(Icons.folder, color: Colors.blue),
                               title: Text(folderName),
                               subtitle: Text(
-                                "📅 ${_formatDate(creationDate)}\n📸 $photoCount fotos",
+                                " ${_formatDate(creationDate)}\n $photoCount fotos",
                                 style: const TextStyle(height: 1.4),
                               ),
                               isThreeLine: true,
-                              onTap: () => _openFolder(folder),
+                              onTap: () =>
+                                  _openFolder(folder), // ← esto es clave
                             );
                           },
                         );
+
+                        // return ListTile(
+                        //   title: Text(folder.name),
+                        //   subtitle: Text(
+                        //     "📅 ${_formatDate(folder.creationDate)}\n📸 0 fotos",
+                        //     style: const TextStyle(height: 1.4),
+                        //   ),
+                        //   trailing: const Icon(Icons.folder),
+                        // );
                       },
                     ),
+              // child: folders.isEmpty
+              //     ? const Text("No hay carpetas creadas.")
+              //     : ListView.builder(
+              //         itemCount: folders.length,
+              //         itemBuilder: (context, index) {
+              //           final folder = folders[index];
+              //           final folderName = folder.path.split('/').last;
+              //           final creationDate = folder.statSync().modified;
+
+              //           return FutureBuilder<int>(
+              //             future: _getPhotoCount(folder.path),
+              //             builder: (context, snapshot) {
+              //               final photoCount = snapshot.data ?? 0;
+              //               return ListTile(
+              //                 leading:
+              //                     const Icon(Icons.folder, color: Colors.blue),
+              //                 title: Text(folderName),
+              //                 subtitle: Text(
+              //                   "📅 ${_formatDate(creationDate)}\n📸 $photoCount fotos",
+              //                   style: const TextStyle(height: 1.4),
+              //                 ),
+              //                 isThreeLine: true,
+              //                 onTap: () => _openFolder(folder),
+              //               );
+              //             },
+              //           );
+              //         },
+              //       ),
             ),
           ],
         ),
