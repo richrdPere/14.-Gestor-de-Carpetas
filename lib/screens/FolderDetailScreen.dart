@@ -130,8 +130,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
-                      mainAxisSpacing: 6,
-                      crossAxisSpacing: 6,
+                      mainAxisSpacing: 2,
+                      crossAxisSpacing: 2,
                     ),
                     itemCount: _photos.length,
                     itemBuilder: (context, index) {
